@@ -21,6 +21,7 @@ class Dense(Layer):
         out_features: int,
         activation: Optional[Callable[[Tensor], Tensor]] = None,
         bias: bool = True,
+        dropout: float = 0.0,  # Dropout oranı
     ):
         super().__init__()
         # Xavier/Glorot benzeri küçük başlangıç
@@ -36,6 +37,7 @@ class Dense(Layer):
             else None
         )
         self.activation = activation  # örn: ag.relu, ag.sigmoid
+        self.dropout = dropout
         # parametre listesini güncelle
         self._params = [self.W] + ([self.b] if self.use_bias else [])
 
@@ -46,6 +48,9 @@ class Dense(Layer):
             z = z + self.b
         if self.activation is not None:
             z = self.activation(z)
+        if self.dropout > 0.0 and self.training:  # Eğitim sırasında Dropout uygula
+            mask = (np.random.rand(*z.data.shape) > self.dropout).astype(np.float32)
+            z.data *= mask
         z.requires_grad = x.requires_grad or self.W.requires_grad or (self.b.requires_grad if self.b is not None else False)
         return z
 

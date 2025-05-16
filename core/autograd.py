@@ -88,3 +88,57 @@ def sigmoid(x: Tensor) -> Tensor:
     out._backward = _backward
     out._prev = {x}
     return out
+
+
+def softmax(x: Tensor) -> Tensor:
+    """
+    Softmax aktivasyon fonksiyonu.
+    Boyutlar arası (genellikle son boyut) normalizasyon sağlar.
+
+    Args:
+        x: Girdi tensörü, genellikle son boyut üzerinde softmax uygulanır
+
+    Returns:
+        Softmax uygulanmış tensör
+    """
+    # Numerik stabilite için max çıkartma
+    shifted_x = x.data - np.max(x.data, axis=-1, keepdims=True)
+    exp_x = np.exp(shifted_x)
+    s = exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+    out = Tensor(s, requires_grad=x.requires_grad)
+
+    def _backward():
+        if x.requires_grad:
+            # Softmax'in karmaşık gradyan hesabı:
+            # Jacobian: ∂softmax_i/∂x_j = softmax_i * (δ_ij - softmax_j)
+            # Bu işlem batch işlemek için uygundur
+            batch_size = out.data.shape[0]
+            n_classes = out.data.shape[-1]
+
+            # Başlangıçta gradyan initialize et
+            dx = np.zeros_like(x.data)
+
+            # Her örnek için döngü
+            for i in range(batch_size):
+                # Örnek için softmax çıktısı
+                sm = out.data[i]
+                # Örnek için gelen gradyan
+                dout = out.grad[i]
+
+                # S * (I - S^T)
+                # S: softmax çıktısı (n_classes,)
+                # I: birim matris (n_classes, n_classes)
+                # S^T: softmax çıktısının transpozu (n_classes,)
+
+                # Jacobian matrisi hesaplama
+                jacobian = np.diag(sm) - np.outer(sm, sm)
+
+                # Gradyan ile Jacobian'ı çarp
+                dx[i] = dout @ jacobian
+
+            # Gradyanı mevcut gradyan ile topla
+            x.grad = (x.grad or 0) + dx
+
+    out._backward = _backward
+    out._prev = {x}
+    return out

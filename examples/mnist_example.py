@@ -7,11 +7,13 @@ import numpy as np
 # Package imports with 'kehanet' prefix
 from core.tensor import Tensor
 from layers.dense import Dense
-from optimizers.sgd import SGD
+from optimizers.adam import Adam  # Change from SGD to Adam
 from losses.cross_entropy import cross_entropy
 from data.dataloader import load_mnist_local, DataLoader
 from training.trainer import Trainer
-from core.autograd import relu
+from core.autograd import relu, sigmoid, softmax
+import pickle  # Add import for saving the model
+from core.sequential import SimpleSequential  # Updated import
 
 # 1. Veri hazırlığı: datasets/mnist içinde bulunan dosyaları kullan
 train_ds, test_ds = load_mnist_local(
@@ -20,7 +22,7 @@ train_ds, test_ds = load_mnist_local(
 train_loader = DataLoader(train_ds, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_ds, batch_size=1000, shuffle=False)
 
-# 2. Model tanımı: 784 -> 128 -> 10
+# 2. Model tanımı: 784 -> 256 -> 128 -> 10
 class SimpleSequential:
     def __init__(self, layers):
         self._layers = layers
@@ -37,12 +39,14 @@ class SimpleSequential:
         return params
 
 model = SimpleSequential([
-    Dense(784, 128, activation=relu, bias=True),
-    Dense(128, 10, activation=None, bias=True)
+    Dense(784, 128, activation=relu, bias=True),  # Daha büyük bir ara katman
+    Dense(128, 64, activation=sigmoid, bias=True),
+    Dense(64, 32, activation=sigmoid, bias=True),
+    Dense(32, 10, activation=softmax, bias=True)
 ])
 
 # 3. Optimizer ve Trainer oluşturma
-optimizer = SGD(model.parameters(), lr=0.01)
+optimizer = Adam(model.parameters(), lr=0.001)  # Changed from SGD to Adam with default parameters
 trainer = Trainer(
     model=model,
     loss_fn=cross_entropy,
@@ -54,6 +58,12 @@ trainer = Trainer(
 
 # 4. Eğitim
 if __name__ == '__main__':
-    epochs = 5
+    epochs = 50
     trainer.train(epochs=epochs)
     trainer.evaluate()
+
+    # Save the trained model
+    model_path = '/home/ali/PycharmProjects/Kehanet/models/trained_mnist_model.pkl'
+    with open(model_path, 'wb') as f:
+        pickle.dump(model, f)
+    print(f"Trained model saved to {model_path}")

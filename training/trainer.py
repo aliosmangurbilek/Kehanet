@@ -46,6 +46,7 @@ class Trainer:
         self.test_loader = test_loader
 
     def train(self, epochs: int = 1) -> None:
+        self.model.training = True  # Eğitim modunu etkinleştir
         for epoch in range(1, epochs + 1):
             epoch_loss = 0.0
             n_batches = 0
@@ -79,6 +80,7 @@ class Trainer:
             print(f"Epoch {epoch}/{epochs} - Loss: {avg_loss:.4f}")
 
     def evaluate(self) -> None:
+        self.model.training = False  # Değerlendirme modunu etkinleştir
         if self.test_loader is None:
             print("Test loader tanımlı değil.")
             return

@@ -9,33 +9,20 @@ from PIL import Image
 from core.tensor import Tensor
 from layers.dense import Dense
 from core.autograd import relu
+import pickle  # Import pickle to load the trained model
+from core.sequential import SimpleSequential  # Updated import
 
-# --- Model tanımı: MNIST eğitilmiş ağı yükleyin / yeniden oluşturun ---
-# Örnek: iki katmanlı 784->128->10 model
-model = None
-# TO DO: Eğitilmiş ağırlıkları dosyadan yükleme ekleyin
-# Şimdilik rasgele ağırlıklı modeli oluşturuyoruz (eğitilmiş değil!)
-def build_model():
-    from layers.dense import Dense
-    layers = [
-        Dense(784, 128, activation=relu, bias=True),
-        Dense(128, 10, activation=None, bias=True)
-    ]
-    class SimpleSequential:
-        def __init__(self, layers):
-            self._layers = layers
-        def __call__(self, x: Tensor) -> Tensor:
-            for layer in self._layers:
-                x = layer(x)
-            return x
-        def parameters(self):
-            params = []
-            for layer in self._layers:
-                params.extend(layer.parameters())
-            return params
-    return SimpleSequential(layers)
+# --- Model tanımı: MNIST eğitilmiş ağı yükleyin ---
+def load_trained_model(model_path: str):
+    with open(model_path, 'rb') as f:
+        return pickle.load(f)
 
-model = build_model()
+model_path = '/home/ali/PycharmProjects/Kehanet/models/trained_mnist_model.pkl'
+try:
+    model = load_trained_model(model_path)
+    print(f"Trained model loaded from {model_path}")
+except FileNotFoundError:
+    print(f"Trained model not found at {model_path}. Using an untrained model.")
 
 # --- Ön işleme fonksiyonu ---
 
@@ -62,13 +49,13 @@ else:
         # Tahmin bölgesi: ekranın ortasında 200x200 dikdörtgen
         h, w = frame.shape[:2]
         x0, y0 = w//2-100, h//2-100
-        roi = frame[y0:y0+200, x0:x0+200]
-        prep = preprocess(roi)
+        roi = frame[y0:y0+200, x0:x0+200]  # Only this 200x200 region is used for detection
+        prep = preprocess(roi)  # Preprocessing only the ROI
         x_tensor = Tensor(prep, requires_grad=False)
-        preds = model(x_tensor).data
+        preds = model(x_tensor).data  # Model prediction only on the ROI
         digit = np.argmax(preds, axis=1)[0]
         # Görüntüye çizim
-        cv2.rectangle(frame, (x0,y0), (x0+200,y0+200), (0,255,0), 2)
+        cv2.rectangle(frame, (x0,y0), (x0+200,y0+200), (0,255,0), 2)  # This draws the green square
         cv2.putText(frame, f"Pred: {digit}", (x0, y0-10),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
         cv2.imshow("Kehanet Digit Predictor", frame)
@@ -87,3 +74,4 @@ def predict_from_file(path: str):
 
 # Örnek kullanım:
 # predict_from_file('digit.png')
+

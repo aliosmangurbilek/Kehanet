@@ -12,8 +12,12 @@ class Tensor:
         self.data = np.asarray(data, dtype=np.float32)
         self.requires_grad = requires_grad
         self.grad: np.ndarray | None = None
-        self._backward: Callable[[], None] = lambda: None
+        self._backward: Callable[[], None] = self._default_backward  # Replace lambda
         self._prev: set[Tensor] = set()
+
+    def _default_backward(self):
+        """Default no-op backward function."""
+        pass
 
     def __repr__(self) -> str:
         return f"Tensor(data={self.data}, requires_grad={self.requires_grad})"
