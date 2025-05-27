@@ -18,7 +18,7 @@ def load_trained_model(model_path: str):
     with open(model_path, 'rb') as f:
         return pickle.load(f)
 
-model_path = '/home/ali/PycharmProjects/Kehanet/examples/trained_mnist_model.pkl'
+model_path = '/home/ali/PycharmProjects/Kehanet/models/trained_mnist_model.pkl'
 try:
     model = load_trained_model(model_path)
     print(f"Trained model loaded from {model_path}")

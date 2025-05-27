@@ -42,10 +42,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description="MNIST örnek eğitim scripti.")
     parser.add_argument("--data-dir", default="/home/ali/PycharmProjects/Kehanet/datasets/mnist/", help="MNIST veri dizini")
     parser.add_argument("--batch-size", type=int, default=128)
-    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=70)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--augment", action="store_true", help="Eğitime augmentasyon ekle")
-    parser.add_argument("--save-path", default="trained_mnist_model.pkl", help="Kaydedilecek model dosyası")
+    parser.add_argument("--save-path", default="/home/ali/PycharmProjects/Kehanet/models/trained_mnist_model.pkl", help="Kaydedilecek model dosyası")
     return parser.parse_args()
 
 # --- 3) Ana fonksiyon ---

@@ -3,51 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MNIST Digit Recognizer</title>
+    <title>MNIST Digit Classifier</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .prediction-result {
-            font-size: 24px;
-            font-weight: bold;
-            margin-top: 20px;
-        }
-        .uploaded-image {
-            max-width: 150px;
-            max-height: 150px;
-            margin-top: 15px;
-        }
-        .main-container {
-            max-width: 800px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container main-container my-5">
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">MNIST Digit Classifier</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="how-it-works-btn">How It Works</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://github.com/your-username/mnist-classifier" target="_blank">GitHub</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container py-5">
+        <!-- How It Works Panel (Hidden by Default) -->
+        <div class="card mb-4 d-none" id="how-it-works-panel">
+            <div class="card-body">
+                <h4>How Deep Learning Recognizes Handwritten Digits</h4>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <p>This application uses a neural network trained on the MNIST dataset to recognize handwritten digits. The pipeline includes:</p>
+                        <ol>
+                            <li><strong>Preprocessing</strong>: The image is converted to grayscale, resized to 28×28 pixels, and normalized.</li>
+                            <li><strong>Feature Extraction</strong>: The neural network extracts patterns from the image data.</li>
+                            <li><strong>Classification</strong>: The model outputs probabilities for each digit (0-9).</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Key Concepts:</h5>
+                        <ul>
+                            <li><span data-bs-toggle="tooltip" data-bs-placement="top" title="Layers that detect patterns like edges and shapes in the image">Convolutional Layers</span></li>
+                            <li><span data-bs-toggle="tooltip" data-bs-placement="top" title="Reduces dimensionality while preserving important features">Pooling</span></li>
+                            <li><span data-bs-toggle="tooltip" data-bs-placement="top" title="Converts model outputs to probabilities that sum to 1">Softmax Activation</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- About the Model Section -->
         <div class="row">
-            <div class="col-12">
-                <div class="card shadow">
+            <div class="col-md-12">
+                <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
-                        <h3 class="mb-0">MNIST Digit Recognizer</h3>
+                        <h5 class="mb-0">About the Model</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <form id="upload-form" enctype="multipart/form-data">
-                                    <div class="mb-3">
-                                        <label for="image-upload" class="form-label">Select an image of a handwritten digit</label>
-                                        <input class="form-control" type="file" id="image-upload" name="file" accept=".png, .jpg, .jpeg">
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Tahmin Et</button>
-                                </form>
-                            </div>
-                            <div class="col-md-6 text-center">
-                                <div id="result-container">
-                                    <img id="preview-image" class="img-fluid uploaded-image d-none" alt="Uploaded image">
-                                    <div id="prediction-result" class="prediction-result mt-3">
-                                        <!-- Prediction result will be shown here -->
-                                    </div>
+                        <p class="lead">This model recognizes handwritten digits using deep learning techniques.</p>
+                        <p>Neural networks learn to identify numbers by extracting visual features from thousands of training examples. When you upload an image, the model processes it through multiple layers, each detecting increasingly complex patterns—from simple edges to digit-specific shapes.</p>
+                        <p>Try uploading your own handwritten digit image below to see the model in action!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Upload & Preview Section -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Upload an Image</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="upload-form" enctype="multipart/form-data">
+                            <div class="upload-area" id="upload-area">
+                                <input type="file" id="file-input" name="file" class="d-none" accept=".jpg, .jpeg, .png">
+                                <div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-cloud-upload" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M4.406 1.342A5.53 5.53 0 0 1 8 0c2.69 0 4.923 2 5.166 4.579C14.758 4.804 16 6.137 16 7.773 16 9.569 14.502 11 12.687 11H10a.5.5 0 0 1 0-1h2.688C13.979 10 15 8.988 15 7.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 2.825 10.328 1 8 1a4.53 4.53 0 0 0-2.941 1.1c-.757.652-1.153 1.438-1.153 2.055v.448l-.445.049C2.064 4.805 1 5.952 1 7.318 1 8.785 2.23 10 3.781 10H6a.5.5 0 0 1 0 1H3.781C1.708 11 0 9.366 0 7.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383z"/>
+                                        <path fill-rule="evenodd" d="M7.646 4.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V14.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                                    </svg>
+                                    <p class="mt-3">Click to upload or drag and drop an image file</p>
+                                    <small class="text-muted">Supported formats: PNG, JPG, JPEG</small>
                                 </div>
                             </div>
+                        </form>
+
+                        <div class="preview-container text-center">
+                            <h6>Original Image</h6>
+                            <div class="image-container">
+                                <img id="original-preview" class="image-preview d-none" alt="Original image">
+                                <div class="loader" id="loader"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preprocessing & Prediction Section -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Preprocessing & Prediction</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <h6>Processed Image (28×28)</h6>
+                                <img id="processed-preview" class="processed-image d-none" width="140" height="140" alt="Processed image">
+                            </div>
+                            <div class="col-6 text-center">
+                                <h6>Top Prediction</h6>
+                                <div class="prediction-digit" id="prediction-digit"></div>
+                            </div>
+                        </div>
+
+                        <div id="prediction-container" class="d-none">
+                            <h6>Probability Distribution</h6>
+                            <div id="probability-bars" class="mt-3"></div>
                         </div>
                     </div>
                 </div>
@@ -55,55 +132,15 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="bg-light py-4 mt-5">
+        <div class="container text-center">
+            <p class="text-muted mb-0">© 2025 MNIST Digit Classifier | Created for educational purposes</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('upload-form');
-            const imageUpload = document.getElementById('image-upload');
-            const previewImage = document.getElementById('preview-image');
-            const predictionResult = document.getElementById('prediction-result');
-
-            // Image preview
-            imageUpload.addEventListener('change', function() {
-                const file = this.files[0];
-                if (file) {
-                    previewImage.src = URL.createObjectURL(file);
-                    previewImage.classList.remove('d-none');
-                    predictionResult.textContent = '';
-                }
-            });
-
-            // Form submission
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                const formData = new FormData(form);
-
-                // Show loading state
-                predictionResult.textContent = 'Tahmin ediliyor...';
-
-                fetch('/predict', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.error) {
-                        predictionResult.textContent = 'Hata: ' + data.error;
-                    } else {
-                        predictionResult.textContent = 'Tahmin edilen rakam: ' + data.prediction;
-                    }
-                })
-                .catch(error => {
-                    predictionResult.textContent = 'Bir hata oluştu: ' + error.message;
-                });
-            });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

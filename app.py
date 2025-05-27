@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import pickle
+import base64
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 
@@ -22,14 +23,23 @@ def load_trained_model(model_path):
     with open(model_path, 'rb') as f:
         return pickle.load(f)
 
-model_path = 'examples/trained_mnist_model.pkl'
+model_path = '/home/ali/PycharmProjects/Kehanet/models/trained_mnist_model.pkl'
 try:
     model = load_trained_model(model_path)
     print(f"Trained model loaded from {model_path}")
 except FileNotFoundError:
-    print(f"Trained model not found at {model_path}")
+    # Try the example folder path if the models folder path fails
+    model_path = '/home/ali/PycharmProjects/Kehanet/examples/trained_mnist_model.pkl'
+    try:
+        model = load_trained_model(model_path)
+        print(f"Trained model loaded from {model_path}")
+    except FileNotFoundError:
+        print(f"Trained model not found at any expected path")
 
 def preprocess(img):
+    # Create a copy of the original image for thumbnail
+    original = img.copy()
+
     # Convert to grayscale if it's a color image
     if len(img.shape) == 3:
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -47,8 +57,20 @@ def preprocess(img):
     if np.mean(norm) > 0.5:  # if background is bright
         norm = 1.0 - norm
 
+    # Save a copy of the processed image for display
+    processed_display = (norm * 255).astype(np.uint8)
+
+    # Create base64 strings for both images
+    _, thumbnail_buffer = cv2.imencode('.png', cv2.resize(original, (150, 150), interpolation=cv2.INTER_AREA))
+    thumbnail_b64 = base64.b64encode(thumbnail_buffer).decode('utf-8')
+
+    _, processed_buffer = cv2.imencode('.png', processed_display)
+    processed_b64 = base64.b64encode(processed_buffer).decode('utf-8')
+
     # Flatten to match model input shape (1, 784)
-    return norm.flatten().reshape(1, -1)  # Ensures shape is (1, 784)
+    model_input = norm.flatten().reshape(1, -1)
+
+    return model_input, thumbnail_b64, processed_b64
 
 @app.route('/')
 def index():
@@ -75,8 +97,8 @@ def predict():
         if img is None:
             return jsonify({'error': 'Failed to read image'}), 400
 
-        # Preprocess the image
-        processed_img = preprocess(img)
+        # Preprocess the image and get base64 encodings
+        processed_img, thumbnail_b64, processed_b64 = preprocess(img)
 
         # Import Tensor class for prediction
         from core.tensor import Tensor
@@ -87,13 +109,25 @@ def predict():
         # Make prediction
         output = model(tensor_input)
 
-        # Get the data from tensor and find argmax
-        prediction = np.argmax(output.data)
+        # Get the data from tensor and convert to probabilities
+        logits = output.data.flatten()
+
+        # Convert logits to probabilities using softmax
+        exp_logits = np.exp(logits - np.max(logits))  # Subtract max for numerical stability
+        probabilities = exp_logits / np.sum(exp_logits)
+
+        # Get the predicted digit
+        prediction = np.argmax(probabilities)
 
         # Clean up by removing the uploaded file
         os.remove(filepath)
 
-        return jsonify({'prediction': int(prediction)})
+        return jsonify({
+            'prediction': int(prediction),
+            'probabilities': probabilities.tolist(),
+            'original_image': f'data:image/png;base64,{thumbnail_b64}',
+            'processed_image': f'data:image/png;base64,{processed_b64}'
+        })
 
     return jsonify({'error': 'Invalid file type'}), 400
 
