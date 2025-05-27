@@ -1,56 +1,48 @@
 # kehanet/layers/dense.py
-"""
-Dense (Tam Bağlantılı) Katmanı
-==============================
-
-y = activation(x @ W + b)
-"""
-
-from __future__ import annotations
 import numpy as np
 from typing import Callable, Optional
-
 from core.tensor import Tensor
 from layers.base import Layer
 
-
 class Dense(Layer):
+    """
+    Tam bağlantılı katman: y = activation(x @ W + b);
+    dropout eğitim modunda uygulanır.
+    """
     def __init__(
         self,
         in_features: int,
         out_features: int,
         activation: Optional[Callable[[Tensor], Tensor]] = None,
         bias: bool = True,
-        dropout: float = 0.0,  # Dropout oranı
-    ):
+        dropout: float = 0.0
+    ) -> None:
         super().__init__()
-        # Xavier/Glorot benzeri küçük başlangıç
         limit = np.sqrt(6 / (in_features + out_features))
         self.W = Tensor(
             np.random.uniform(-limit, limit, size=(in_features, out_features)),
-            requires_grad=True,  # Set requires_grad=True for W
+            requires_grad=True
         )
-        self.use_bias = bias
         self.b = (
-            Tensor(np.zeros((1, out_features), dtype=np.float32), requires_grad=True)  # Set requires_grad=True for b
-            if bias
-            else None
+            Tensor(np.zeros((1, out_features)), requires_grad=True)
+            if bias else None
         )
-        self.activation = activation  # örn: ag.relu, ag.sigmoid
-        self.dropout = dropout
-        # parametre listesini güncelle
-        self._params = [self.W] + ([self.b] if self.use_bias else [])
+        self.activation = activation
+        self.dropout = float(dropout)
+        self._params = [self.W] + ([self.b] if self.b is not None else [])
 
-    # ---------------------------------------------------------------------- #
     def forward(self, x: Tensor) -> Tensor:
         z = x @ self.W
-        if self.use_bias:
+        if self.b is not None:
             z = z + self.b
-        if self.activation is not None:
+        if self.activation:
             z = self.activation(z)
-        if self.dropout > 0.0 and self.training:  # Eğitim sırasında Dropout uygula
-            mask = (np.random.rand(*z.data.shape) > self.dropout).astype(np.float32)
-            z.data *= mask
-        z.requires_grad = x.requires_grad or self.W.requires_grad or (self.b.requires_grad if self.b is not None else False)
+        # dropout only in training
+        if self.dropout > 0.0 and self.training:
+            mask = (np.random.rand(*z.shape) > self.dropout).astype(np.float32)
+            z = z * Tensor(mask, requires_grad=False)
         return z
 
+    def __repr__(self) -> str:
+        base = super().__repr__()
+        return f"{base[:-1]}, dropout={self.dropout})"

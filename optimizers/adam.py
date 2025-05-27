@@ -1,68 +1,74 @@
-# kehanet/optimizers/adam.py
+# core/optimizers/adam.py
 """
-Adam Optimizer
-==============
-
 Adaptive Moment Estimation (Adam) optimizer implementation.
-Diederik P. Kingma and Jimmy Ba, 2014.
+Kingma & Ba, 2014.
 https://arxiv.org/abs/1412.6980
 """
-
-from typing import List
+from __future__ import annotations
+from typing import List, Tuple
 import numpy as np
 from core.tensor import Tensor
 
-
 class Adam:
+    """
+    Adam optimizer.
+
+    Attributes
+    ----------
+    parameters : List[Tensor]
+        Optimize edilecek parametreler.
+    lr : float
+        Öğrenme oranı.
+    betas : Tuple[float, float]
+        (beta1, beta2) moment katsayıları.
+    eps : float
+        Sayısal kararlılık epsilonu.
+    """
     def __init__(
         self,
         parameters: List[Tensor],
-        lr: float = 0.001,
-        betas: tuple = (0.9, 0.999),
+        lr: float = 1e-3,
+        betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-8
-    ):
-        """
-        Adam optimizer constructor.
-        
-        Args:
-            parameters: List of parameters to optimize
-            lr: Learning rate (default: 0.001)
-            betas: Coefficients for computing running averages of gradient and its square
-                  (default: (0.9, 0.999))
-            eps: Term added to denominator for numerical stability (default: 1e-8)
-        """
-        self.parameters = parameters
-        self.lr = lr
+    ) -> None:
+        self.parameters: List[Tensor] = parameters
+        self.lr: float = lr
         self.beta1, self.beta2 = betas
-        self.eps = eps
-        
-        # Initialize moment estimates and step counter
-        self.m = [np.zeros_like(p.data) for p in parameters]
-        self.v = [np.zeros_like(p.data) for p in parameters]
-        self.t = 0
-    
-    def step(self):
-        """Performs a single optimization step."""
-        self.t += 1
-        
-        for i, p in enumerate(self.parameters):
-            if p.grad is None:
+        self.eps: float = eps
+        # İlk ve ikinci momentler
+        self._m: List[np.ndarray] = [np.zeros_like(p.data) for p in parameters]
+        self._v: List[np.ndarray] = [np.zeros_like(p.data) for p in parameters]
+        self._t: int = 0
+
+    def step(self) -> None:
+        """
+        Tek optimizasyon adımı.
+        """
+        self._t += 1
+        for idx, p in enumerate(self.parameters):
+            grad = p.grad
+            if grad is None:
                 continue
-                
-            # Update biased first moment estimate
-            self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * p.grad
-            
-            # Update biased second raw moment estimate
-            self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * (p.grad ** 2)
-            
-            # Bias correction
-            m_hat = self.m[i] / (1 - self.beta1 ** self.t)
-            v_hat = self.v[i] / (1 - self.beta2 ** self.t)
-            
-            # Update parameters
-            p.data -= self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
-    
-    def zero_grad(self):
-        """Clears the gradients of all optimized tensors."""
+            # 1. moment (eğik ortalama)
+            self._m[idx] = self.beta1 * self._m[idx] + (1 - self.beta1) * grad
+            # 2. moment (eğik ortalama kare)
+            self._v[idx] = self.beta2 * self._v[idx] + (1 - self.beta2) * (grad ** 2)
+            # Bias düzeltme
+            m_hat = self._m[idx] / (1 - self.beta1 ** self._t)
+            v_hat = self._v[idx] / (1 - self.beta2 ** self._t)
+            # Parametre güncellemesi
+            update = self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
+            p.data = p.data - update
+
+    def zero_grad(self) -> None:
+        """
+        Tüm parametrelerin gradyanlarını temizler.
+        """
         for p in self.parameters:
             p.grad = None
+
+    def __repr__(self) -> str:
+        return (
+            f"Adam(lr={self.lr}, betas=({self.beta1}, {self.beta2}), "
+            f"eps={self.eps}, step={self._t})"
+        )

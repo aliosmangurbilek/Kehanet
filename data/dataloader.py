@@ -1,24 +1,24 @@
-# kehanet/data/dataloader.py
-"""
-Local MNIST veri seti yükleyici ve DataLoader sınıfı.
-Veri dosyaları `datasets/mnist` dizininde `.idx3-ubyte` ve `.idx1-ubyte` formatında bulunmalıdır.
-Girilen dosya sıkıştırılmış (.gz) ya da düz formatta olabilir.
-"""
+# core/data/dataloader.py
+from __future__ import annotations
 import gzip
 import struct
-import os
+from pathlib import Path
 import numpy as np
-from typing import Tuple, Iterator
+from typing import Tuple, Iterator, Optional, Union
 from core.tensor import Tensor
 
 class Dataset:
     """
-    Basit Dataset sınıfı: ham veri ve etiketleri taşır.
+    Ham veri ve etiketleri taşıyan basit veri kümesi sınıfı.
     """
-    def __init__(self, data: np.ndarray, labels: np.ndarray):
+    def __init__(
+        self,
+        data: np.ndarray,
+        labels: np.ndarray
+    ):
         assert data.shape[0] == labels.shape[0], "Veri ve etiket sayıları uyuşmuyor"
-        self.data = data.astype(np.float32)
-        self.labels = labels.astype(np.float32)
+        self.data: np.ndarray = data.astype(np.float32)
+        self.labels: np.ndarray = labels.astype(np.float32)
 
     def __len__(self) -> int:
         return self.data.shape[0]
@@ -29,165 +29,109 @@ class Dataset:
 class DataLoader:
     """
     Mini-batch veri yükleyici.
-    Kullanım: for X_batch, y_batch in DataLoader(dataset, batch_size=32):
-    """
-    def __init__(self, dataset: Dataset, batch_size: int = 32, shuffle: bool = True):
-        self.dataset = dataset
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        self._indices = np.arange(len(dataset))
-        self._position = 0
 
-    def __iter__(self) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+    Yields X_batch, y_batch (numpy dizileri veya Tensorler).
+    """
+    def __init__(
+        self,
+        dataset: Dataset,
+        batch_size: int = 32,
+        shuffle: bool = True,
+        to_tensor: bool = False
+    ):
+        self.dataset: Dataset = dataset
+        self.batch_size: int = batch_size
+        self.shuffle: bool = shuffle
+        self.to_tensor: bool = to_tensor
+        self._indices: np.ndarray = np.arange(len(dataset))
+        self._pos: int = 0
+
+    def __iter__(self) -> DataLoader:
         if self.shuffle:
             np.random.shuffle(self._indices)
-        self._position = 0
+        self._pos = 0
         return self
 
-    def __next__(self) -> Tuple[np.ndarray, np.ndarray]:
-        if self._position >= len(self._indices):
+    def __next__(self) -> Tuple[Union[np.ndarray, Tensor], Union[np.ndarray, Tensor]]:
+        if self._pos >= len(self._indices):
             raise StopIteration
-        start = self._position
+        start = self._pos
         end = min(start + self.batch_size, len(self._indices))
         idx = self._indices[start:end]
-        batch_data = self.dataset.data[idx]
-        batch_labels = self.dataset.labels[idx]
-        self._position = end
-        return batch_data, batch_labels
+        X_batch = self.dataset.data[idx]
+        y_batch = self.dataset.labels[idx]
+        self._pos = end
+        if self.to_tensor:
+            X_batch = Tensor(X_batch)
+            y_batch = Tensor(y_batch)
+        return X_batch, y_batch
 
+# --- Yardımcı fonksiyonlar ---
 
-def _read_idx(path: str) -> np.ndarray:
+def _resolve_path(path: Path) -> Path:
     """
-    IDX formatındaki dosyayı (.gz veya düz) okuyup numpy array olarak döner.
+    .gz ile sıkıştırılmış dosya varsa onu, yoksa orijinal dosyayı döner.
     """
-    open_fn = gzip.open if path.endswith('.gz') else open
+    gz_path = path.with_suffix(path.suffix + '.gz')
+    if gz_path.exists():
+        return gz_path
+    if path.exists():
+        return path
+    raise FileNotFoundError(f"Dosya bulunamadı: {path}")
+
+def _read_idx(path: Path) -> np.ndarray:
+    """
+    IDX formatındaki (sıkıştırılmış veya düz) dosyayı numpy dizisine çevirir.
+    """
+    open_fn = gzip.open if path.suffix == '.gz' else open
     with open_fn(path, 'rb') as f:
-        # İlk 4 byte magic number
-        magic_number = struct.unpack('>I', f.read(4))[0]
-        if magic_number == 0x00000803 or magic_number == 2051:
-            # images
+        magic = struct.unpack('>I', f.read(4))[0]
+        if magic in (0x00000803, 2051):  # image file
             num, rows, cols = struct.unpack('>III', f.read(12))
             data = np.frombuffer(f.read(), dtype=np.uint8)
             return data.reshape(num, rows * cols)
-        elif magic_number == 0x00000801 or magic_number == 2049:
-            # labels
+        if magic in (0x00000801, 2049):  # label file
             num, = struct.unpack('>I', f.read(4))
-            data = np.frombuffer(f.read(), dtype=np.uint8)
-            return data
-        else:
-            raise ValueError(f"Geçersiz IDX magic numarası: {magic_number}")
+            return np.frombuffer(f.read(), dtype=np.uint8)
+        raise ValueError(f"Geçersiz IDX magic numarası: {magic}")
 
 
 def load_mnist_local(
-    folder: str = 'datasets/mnist',
+    folder: Union[str, Path] = 'datasets/mnist',
     normalize: bool = True,
     one_hot: bool = True
 ) -> Tuple[Dataset, Dataset]:
     """
-    Local MNIST veri setini yükler.
-    folder: MNIST dosyalarının bulunduğu dizin (path/to/datasets/mnist)
-    normalize: True ise [0,1] aralığına ölçekler
-    one_hot: True ise etiketleri one-hot formata çevirir
-
-    Gerekli dosyalar:
-        train-images-idx3-ubyte[.gz]
-        train-labels-idx1-ubyte[.gz]
-        t10k-images-idx3-ubyte[.gz]
-        t10k-labels-idx1-ubyte[.gz]
+    MNIST veri setini folder altında arayıp yükler.
+    normalize: True ise [0,1] aralığına ölçekler.
+    one_hot: True ise etiketleri one-hot kodlamasına çevirir.
     """
-    # Dosya isimleri
-    img_train = os.path.join(folder, 'train-images.idx3-ubyte')
-    lbl_train = os.path.join(folder, 'train-labels.idx1-ubyte')
-    img_test  = os.path.join(folder, 't10k-images.idx3-ubyte')
-    lbl_test  = os.path.join(folder, 't10k-labels.idx1-ubyte')
+    folder = Path(folder)
+    # Dosya yollarını çöz ve oku
+    img_train = _read_idx(_resolve_path(folder / 'train-images.idx3-ubyte'))
+    y_train   = _read_idx(_resolve_path(folder / 'train-labels.idx1-ubyte'))
+    img_test  = _read_idx(_resolve_path(folder / 't10k-images.idx3-ubyte'))
+    y_test    = _read_idx(_resolve_path(folder / 't10k-labels.idx1-ubyte'))
 
-    # Eğer .gz uzantılı hali varsa, ona yönlendir
-    def _choose(path):
-        if os.path.exists(path + '.gz'):
-            return path + '.gz'
-        return path
-
-    img_train = _choose(img_train)
-    lbl_train = _choose(lbl_train)
-    img_test  = _choose(img_test)
-    lbl_test  = _choose(lbl_test)
-
-    # Verileri oku
-    X_train = _read_idx(img_train)
-    y_train = _read_idx(lbl_train)
-    X_test  = _read_idx(img_test)
-    y_test  = _read_idx(lbl_test)
-
-    # Normalizasyon
+    # Normalize
     if normalize:
-        X_train = X_train.astype(np.float32) / 255.0
-        X_test  = X_test.astype(np.float32) / 255.0
+        X_train = img_train.astype(np.float32) / 255.0
+        X_test  = img_test.astype(np.float32) / 255.0
     else:
-        X_train = X_train.astype(np.float32)
-        X_test  = X_test.astype(np.float32)
+        X_train = img_train.astype(np.float32)
+        X_test  = img_test.astype(np.float32)
 
-    # Etiket formatı
+    # Etiketleri hazırla
     if one_hot:
-        n_train = y_train.shape[0]
-        n_test  = y_test.shape[0]
-        labels_train = np.zeros((n_train, 10), dtype=np.float32)
-        labels_train[np.arange(n_train), y_train] = 1.0
-        labels_test  = np.zeros((n_test, 10), dtype=np.float32)
-        labels_test[np.arange(n_test), y_test]   = 1.0
+        def to_one_hot(y: np.ndarray) -> np.ndarray:
+            n = y.shape[0]
+            oh = np.zeros((n, 10), dtype=np.float32)
+            oh[np.arange(n), y] = 1.0
+            return oh
+        y_train_ = to_one_hot(y_train)
+        y_test_  = to_one_hot(y_test)
     else:
-        labels_train = y_train.astype(np.float32)
-        labels_test  = y_test.astype(np.float32)
+        y_train_ = y_train.astype(np.float32)
+        y_test_  = y_test.astype(np.float32)
 
-    return Dataset(X_train, labels_train), Dataset(X_test, labels_test)
-
-def load_mnist_local(
-    folder: str = 'datasets/mnist',
-    normalize: bool = True,
-    one_hot: bool = True
-) -> Tuple[Dataset, Dataset]:
-    """
-    Local MNIST veri setini yükler.
-    folder: MNIST dosyalarının bulunduğu dizin (path/to/datasets/mnist)
-    normalize: True ise [0,1] aralığına ölçekler
-    one_hot: True ise etiketleri one-hot formata çevirir
-
-    Gerekli dosyalar:
-        train-images-idx3-ubyte[.gz]
-        train-labels-idx1-ubyte[.gz]
-        t10k-images-idx3-ubyte[.gz]
-        t10k-labels-idx1-ubyte[.gz]
-    """
-    # Yol tanımları
-    img_train = os.path.join(folder, 'train-images.idx3-ubyte')
-    lbl_train = os.path.join(folder, 'train-labels.idx1-ubyte')
-    img_test  = os.path.join(folder, 't10k-images.idx3-ubyte')
-    lbl_test  = os.path.join(folder, 't10k-labels.idx1-ubyte')
-    # varsa .gz eke bak
-    for p in [img_train, lbl_train, img_test, lbl_test]:
-        if not os.path.exists(p) and os.path.exists(p):
-            p += '.gz'
-    # Oku
-    X_train = _read_idx(img_train if os.path.exists(img_train) else img_train )
-    y_train = _read_idx(lbl_train if os.path.exists(lbl_train) else lbl_train )
-    X_test  = _read_idx(img_test  if os.path.exists(img_test)  else img_test  )
-    y_test  = _read_idx(lbl_test  if os.path.exists(lbl_test)  else lbl_test  )
-
-    if normalize:
-        X_train = X_train.astype(np.float32) / 255.0
-        X_test  = X_test.astype(np.float32) / 255.0
-    else:
-        X_train = X_train.astype(np.float32)
-        X_test  = X_test.astype(np.float32)
-
-    if one_hot:
-        n_train = y_train.shape[0]
-        n_test  = y_test.shape[0]
-        labels_train = np.zeros((n_train, 10), dtype=np.float32)
-        labels_train[np.arange(n_train), y_train] = 1.0
-        labels_test  = np.zeros((n_test, 10), dtype=np.float32)
-        labels_test[np.arange(n_test), y_test]   = 1.0
-    else:
-        labels_train = y_train.astype(np.float32)
-        labels_test  = y_test.astype(np.float32)
-
-    return Dataset(X_train, labels_train), Dataset(X_test, labels_test)
+    return Dataset(X_train, y_train_), Dataset(X_test, y_test_)
