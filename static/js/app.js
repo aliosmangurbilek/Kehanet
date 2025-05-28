@@ -1,103 +1,205 @@
-// MNIST Digit Classifier Frontend Logic
+// MNIST Digit Classifier - App Logic
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Get DOM elements
-    const uploadForm = document.getElementById('upload-form');
+    // DOM Elements
     const uploadArea = document.getElementById('upload-area');
     const fileInput = document.getElementById('file-input');
+    const drawingCanvas = document.getElementById('drawing-canvas');
+    const clearBtn = document.getElementById('clear-btn');
+    const predictUploadBtn = document.getElementById('predict-upload-btn');
+    const predictDrawBtn = document.getElementById('predict-draw-btn');
     const originalPreview = document.getElementById('original-preview');
     const processedPreview = document.getElementById('processed-preview');
-    const predictionContainer = document.getElementById('prediction-container');
-    const probabilityBars = document.getElementById('probability-bars');
-    const predictionDigit = document.getElementById('prediction-digit');
-    const loader = document.getElementById('loader');
-    const howItWorksBtn = document.getElementById('how-it-works-btn');
-    const howItWorksPanel = document.getElementById('how-it-works-panel');
+    const predictionResult = document.getElementById('prediction-result');
+    const resultsSection = document.getElementById('results-section');
+    const loadingOverlay = document.getElementById('loading-overlay');
 
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
+    // Initialize Chart.js
+    let probabilityChart = null;
 
-    // Toggle How It Works panel
-    if (howItWorksBtn && howItWorksPanel) {
-        howItWorksBtn.addEventListener('click', function() {
-            if (howItWorksPanel.classList.contains('d-none')) {
-                howItWorksPanel.classList.remove('d-none');
-                howItWorksBtn.textContent = 'Hide How It Works';
-            } else {
-                howItWorksPanel.classList.add('d-none');
-                howItWorksBtn.textContent = 'How It Works';
-            }
-        });
+    // Canvas drawing variables
+    let isDrawing = false;
+    let ctx = drawingCanvas.getContext('2d');
+    let lastX = 0;
+    let lastY = 0;
+
+    // Initialize canvas
+    function initCanvas() {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        ctx.lineWidth = 15;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'black';
     }
 
-    // Handle file upload and drag & drop
-    if (uploadArea) {
-        uploadArea.addEventListener('click', function() {
-            fileInput.click();
-        });
+    // Clear the canvas
+    function clearCanvas() {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+    }
 
-        uploadArea.addEventListener('dragover', function(e) {
+    // Drawing event listeners
+    if (drawingCanvas) {
+        initCanvas();
+
+        drawingCanvas.addEventListener('mousedown', startDrawing);
+        drawingCanvas.addEventListener('mousemove', draw);
+        drawingCanvas.addEventListener('mouseup', stopDrawing);
+        drawingCanvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch support
+        drawingCanvas.addEventListener('touchstart', handleTouchStart);
+        drawingCanvas.addEventListener('touchmove', handleTouchMove);
+        drawingCanvas.addEventListener('touchend', stopDrawing);
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', clearCanvas);
+        }
+
+        if (predictDrawBtn) {
+            predictDrawBtn.addEventListener('click', function() {
+                const imageData = drawingCanvas.toDataURL('image/png');
+                predictFromCanvas(imageData);
+            });
+        }
+    }
+
+    // File upload handling
+    if (uploadArea && fileInput) {
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
 
-        uploadArea.addEventListener('dragleave', function() {
+        uploadArea.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
         });
 
-        uploadArea.addEventListener('drop', function(e) {
+        uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
 
             if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                handleFileSelected();
+                handleFileSelect(e.dataTransfer.files[0]);
             }
         });
 
-        fileInput.addEventListener('change', handleFileSelected);
-    }
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                handleFileSelect(fileInput.files[0]);
+            }
+        });
 
-    // Handle file selection
-    function handleFileSelected() {
-        if (!fileInput.files || !fileInput.files[0]) return;
+        if (predictUploadBtn) {
+            predictUploadBtn.addEventListener('click', function() {
+                if (fileInput.files.length) {
+                    const file = fileInput.files[0];
+                    const reader = new FileReader();
 
-        const file = fileInput.files[0];
+                    reader.onload = function(e) {
+                        predictFromUpload(e.target.result);
+                    };
 
-        // Display the original image preview
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            originalPreview.src = e.target.result;
-            originalPreview.classList.remove('d-none');
-        };
-        reader.readAsDataURL(file);
-
-        // Submit the form automatically when a file is selected
-        if (uploadForm) {
-            submitForm();
+                    reader.readAsDataURL(file);
+                }
+            });
         }
     }
 
-    // Handle form submission
-    function submitForm() {
-        // Show loading indicator
-        if (loader) loader.style.display = 'block';
+    // Handle file selection
+    function handleFileSelect(file) {
+        if (!file.type.match('image.*')) {
+            alert('Please select an image file.');
+            return;
+        }
 
-        // Clear previous results
-        if (processedPreview) processedPreview.classList.add('d-none');
-        if (predictionContainer) predictionContainer.classList.add('d-none');
-        if (probabilityBars) probabilityBars.innerHTML = '';
+        const reader = new FileReader();
 
-        // Prepare form data for submission
-        const formData = new FormData(uploadForm);
+        reader.onload = function(e) {
+            // Show preview
+            originalPreview.src = e.target.result;
 
-        // Send POST request to backend
+            // Enable predict button
+            if (predictUploadBtn) {
+                predictUploadBtn.disabled = false;
+            }
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    // Drawing functions
+    function startDrawing(e) {
+        isDrawing = true;
+        [lastX, lastY] = getCoordinates(e);
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+
+        // Prevent scrolling on mobile
+        e.preventDefault();
+
+        const [x, y] = getCoordinates(e);
+
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+        [lastX, lastY] = [x, y];
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+    }
+
+    function getCoordinates(e) {
+        const rect = drawingCanvas.getBoundingClientRect();
+        const scaleX = drawingCanvas.width / rect.width;
+        const scaleY = drawingCanvas.height / rect.height;
+
+        if (e.touches && e.touches[0]) {
+            return [
+                (e.touches[0].clientX - rect.left) * scaleX,
+                (e.touches[0].clientY - rect.top) * scaleY
+            ];
+        }
+
+        return [
+            (e.clientX - rect.left) * scaleX,
+            (e.clientY - rect.top) * scaleY
+        ];
+    }
+
+    // Touch event handlers
+    function handleTouchStart(e) {
+        e.preventDefault();
+        if (e.touches && e.touches.length === 1) {
+            startDrawing(e);
+        }
+    }
+
+    function handleTouchMove(e) {
+        e.preventDefault();
+        if (e.touches && e.touches.length === 1) {
+            draw(e);
+        }
+    }
+
+    // Prediction functions
+    function predictFromUpload(imageData) {
+        showLoading();
+
         fetch('/predict', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ file: imageData })
         })
         .then(response => {
             if (!response.ok) {
@@ -106,85 +208,151 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            // Hide loading indicator
-            if (loader) loader.style.display = 'none';
-
-            // Display processed image
-            if (processedPreview && data.processed_image) {
-                processedPreview.src = data.processed_image;
-                processedPreview.classList.remove('d-none');
-            }
-
-            // Show prediction container
-            if (predictionContainer) predictionContainer.classList.remove('d-none');
-
-            // Display digit probabilities as horizontal bars
-            if (probabilityBars && data.probabilities) {
-                displayProbabilities(data.probabilities);
-            }
-
-            // Show top prediction
-            if (predictionDigit && typeof data.prediction !== 'undefined') {
-                predictionDigit.textContent = data.prediction;
-            }
+            updateResults(data);
+            hideLoading();
         })
         .catch(error => {
             console.error('Error:', error);
-            if (loader) loader.style.display = 'none';
-            alert('Error processing image: ' + error.message);
+            alert('Error processing image. Please try again.');
+            hideLoading();
         });
     }
 
-    // Display probability bars
-    function displayProbabilities(probabilities) {
-        // Find maximum probability for highlighting
+    function predictFromCanvas(imageData) {
+        showLoading();
+
+        fetch('/predict', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ canvas: imageData })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            updateResults(data);
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error processing image. Please try again.');
+            hideLoading();
+        });
+    }
+
+    // Update results in the UI
+    function updateResults(data) {
+        // Update images
+        originalPreview.src = data.original;
+        processedPreview.src = data.preprocessed;
+
+        // Update prediction
+        predictionResult.textContent = data.prediction;
+
+        // Update chart
+        updateProbabilityChart(data.probs);
+
+        // Show results section
+        resultsSection.classList.remove('d-none');
+
+        // Scroll to results if needed
+        if (window.innerHeight < 800) {
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    // Initialize and update probability chart
+    function updateProbabilityChart(probabilities) {
+        const ctx = document.getElementById('probability-chart').getContext('2d');
+        const labels = Array.from({length: 10}, (_, i) => i.toString());
         const maxProb = Math.max(...probabilities);
         const maxIndex = probabilities.indexOf(maxProb);
 
-        // Create and animate bars for each digit
-        probabilityBars.innerHTML = '';
-        probabilities.forEach((prob, index) => {
-            const percentage = (prob * 100).toFixed(2);
+        // Format probabilities as percentages
+        const formattedProbs = probabilities.map(p => (p * 100).toFixed(2));
 
-            // Create bar container
-            const digitContainer = document.createElement('div');
-            digitContainer.className = 'digit-probability';
+        // Create background colors array (highlight the max)
+        const backgroundColors = probabilities.map((_, index) =>
+            index === maxIndex ? 'rgba(25, 135, 84, 0.8)' : 'rgba(13, 110, 253, 0.8)'
+        );
 
-            // Create digit label
-            const digitLabel = document.createElement('div');
-            digitLabel.className = 'digit-label';
-            digitLabel.textContent = index;
+        // Create border colors array
+        const borderColors = probabilities.map((_, index) =>
+            index === maxIndex ? 'rgb(25, 135, 84)' : 'rgb(13, 110, 253)'
+        );
 
-            // Create bar
-            const bar = document.createElement('div');
-            bar.className = 'probability-bar';
-            if (index === maxIndex) {
-                bar.classList.add('top-prediction');
+        // Destroy previous chart if it exists
+        if (probabilityChart) {
+            probabilityChart.destroy();
+        }
+
+        // Create new chart
+        probabilityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Probability (%)',
+                    data: formattedProbs,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Probability: ${context.raw}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Probability (%)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Digit'
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000
+                }
             }
-
-            // Create probability value label
-            const probValue = document.createElement('div');
-            probValue.className = 'probability-value';
-            probValue.textContent = percentage + '%';
-
-            // Add elements to container
-            digitContainer.appendChild(digitLabel);
-            digitContainer.appendChild(bar);
-            digitContainer.appendChild(probValue);
-            probabilityBars.appendChild(digitContainer);
-
-            // Animate the bar width with a small delay based on index
-            setTimeout(() => {
-                bar.style.width = percentage + '%';
-            }, 50 * index);
         });
     }
 
-    // Handle form submission
-    if (uploadForm) {
-        uploadForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitForm();
-        });
+    // Loading indicator functions
+    function showLoading() {
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('d-none');
+        }
+    }
+
+    function hideLoading() {
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('d-none');
+        }
     }
 });

@@ -1,37 +1,42 @@
-/* Main styling for MNIST Classifier App */
+/* MNIST Digit Classifier - Main Styles */
+
+/* ------------ General Styles ------------ */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     background-color: #f8f9fa;
+    color: #212529;
 }
 
+/* Navbar customization */
 .navbar-brand {
     font-weight: 600;
     letter-spacing: -0.5px;
 }
 
+/* Card styling */
 .card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    transition: transform 0.3s ease;
-}
-
-.card:hover {
-    transform: translateY(-5px);
+    border: none;
+    border-radius: 12px;
+    transition: all 0.3s ease;
 }
 
 .card-header {
-    border-radius: 10px 10px 0 0 !important;
-    font-weight: 500;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 1rem 1.5rem;
+    border-radius: 12px 12px 0 0 !important;
 }
 
+/* ------------ Upload Section ------------ */
 .upload-area {
-    border: 2px dashed #ccc;
+    border: 2px dashed #dee2e6;
     border-radius: 8px;
-    padding: 2rem;
+    padding: 3rem 1rem;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease-in-out;
+    background-color: #f8f9fa;
+    max-width: 500px;
+    margin: 0 auto;
 }
 
 .upload-area:hover, .upload-area.dragover {
@@ -39,113 +44,141 @@ body {
     background-color: rgba(13, 110, 253, 0.05);
 }
 
-.preview-container {
-    margin-top: 1.5rem;
+.upload-icon {
+    margin-bottom: 1rem;
+    color: #6c757d;
 }
 
-.image-preview {
-    max-width: 100%;
-    max-height: 200px;
-    border-radius: 5px;
+.upload-text p {
+    margin-bottom: 0.25rem;
 }
 
-.processed-image {
-    image-rendering: pixelated;
-    border: 1px solid #ddd;
+.upload-area:hover .upload-icon,
+.upload-area.dragover .upload-icon {
+    color: #0d6efd;
+}
+
+/* ------------ Drawing Canvas ------------ */
+.drawing-container {
+    text-align: center;
+    max-width: 500px;
     margin: 0 auto;
-    display: block;
 }
 
-.prediction-chart {
-    height: 300px;
+.drawing-canvas {
+    background-color: white;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    touch-action: none;
+    cursor: crosshair;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-.digit-probability {
-    margin-bottom: 8px;
+/* ------------ Image Previews ------------ */
+.image-preview-container, .processed-preview-container {
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+    background-color: white;
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
-.digit-label {
-    min-width: 30px;
+.image-preview-container {
+    width: 150px;
+    height: 150px;
+}
+
+.processed-preview-container {
+    width: 140px;
+    height: 140px;
+}
+
+.original-preview {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.processed-preview {
+    width: 140px;
+    height: 140px;
+    image-rendering: pixelated; /* Show pixelation clearly */
+}
+
+/* ------------ Prediction Display ------------ */
+.top-prediction {
+    font-size: 5rem;
+    font-weight: bold;
+    color: #0d6efd;
+    margin: 0.5rem 0;
+    line-height: 1;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chart-container {
+    height: 250px;
+    position: relative;
+    margin-top: 1rem;
+}
+
+/* ------------ Loading Overlay ------------ */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+}
+
+/* ------------ Responsive Adjustments ------------ */
+@media (max-width: 767.98px) {
+    .top-prediction {
+        font-size: 4rem;
+        height: 80px;
+    }
+
+    .chart-container {
+        height: 200px;
+    }
+
+    .drawing-canvas {
+        width: 100%;
+        max-width: 280px;
+        height: auto;
+    }
+}
+
+/* Animation for results */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#results-section:not(.d-none) {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Navigation pills customization */
+.nav-pills .nav-link {
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
     font-weight: 500;
 }
 
-.probability-bar {
-    height: 30px;
+.nav-pills .nav-link.active {
     background-color: #0d6efd;
-    border-radius: 4px;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 10px;
-    transition: width 1s ease-out;
-    width: 0%;
 }
 
-.probability-value {
-    margin-left: 10px;
-    min-width: 60px;
-}
-
-.top-prediction {
-    background-color: #198754;
-}
-
-.how-it-works-panel {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    margin-top: 1rem;
-    padding: 1rem;
-}
-
-.model-diagram {
-    max-width: 100%;
-    height: auto;
-}
-
-.image-container {
-    position: relative;
-}
-
-.loader {
-    display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-radius: 50%;
-    border-top: 4px solid #0d6efd;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: translate(-50%, -50%) rotate(0deg); }
-    100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-.prediction-digit {
-    font-size: 5rem;
-    font-weight: bold;
-    color: #198754;
-    text-align: center;
-    margin: 1rem 0;
-}
-
-.tooltip-icon {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    background-color: #6c757d;
-    color: white;
-    border-radius: 50%;
-    text-align: center;
-    font-size: 12px;
-    line-height: 18px;
-    margin-left: 5px;
-    cursor: pointer;
-}
+/* Bootstrap icons (for tab icons) */
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css");

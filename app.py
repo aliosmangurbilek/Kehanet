@@ -5,6 +5,8 @@ import pickle
 import base64
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
+import io
+from PIL import Image
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -36,8 +38,27 @@ except FileNotFoundError:
     except FileNotFoundError:
         print(f"Trained model not found at any expected path")
 
-def preprocess(img):
-    # Create a copy of the original image for thumbnail
+def preprocess_image(img_bytes):
+    """
+    Preprocess an image from bytes data to a normalized 28x28 array
+    suitable for MNIST model inference.
+
+    Args:
+        img_bytes: Image data as bytes
+
+    Returns:
+        tuple: (model_input, original_base64, preprocessed_base64)
+            - model_input: numpy array of shape (1, 784) for model input
+            - original_base64: base64 encoding of the original image
+            - preprocessed_base64: base64 encoding of the preprocessed 28x28 image
+    """
+    # Open image from bytes data
+    image = Image.open(io.BytesIO(img_bytes))
+
+    # Convert to OpenCV format
+    img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+    # Create a copy for the original thumbnail
     original = img.copy()
 
     # Convert to grayscale if it's a color image
@@ -72,33 +93,52 @@ def preprocess(img):
 
     return model_input, thumbnail_b64, processed_b64
 
+def extract_base64_data(data_uri):
+    """
+    Extract the base64 encoded binary data from a data URI.
+
+    Args:
+        data_uri: Data URI string starting with "data:image/..."
+
+    Returns:
+        bytes: Decoded image data as bytes
+    """
+    # Extract the base64 part from the data URI
+    header, encoded = data_uri.split(",", 1)
+    image_data = base64.b64decode(encoded)
+    return image_data
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+    data = request.get_json()
 
-    file = request.files['file']
+    if not data:
+        return jsonify({'error': 'No data received'}), 400
 
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+    img_bytes = None
 
-    if file and allowed_file(file.filename):
-        # Save the uploaded file temporarily
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+    if 'file' in data:
+        # Handle file upload
+        try:
+            img_bytes = extract_base64_data(data['file'])
+        except Exception as e:
+            return jsonify({'error': f'Invalid file data: {str(e)}'}), 400
+    elif 'canvas' in data:
+        # Handle canvas drawing
+        try:
+            img_bytes = extract_base64_data(data['canvas'])
+        except Exception as e:
+            return jsonify({'error': f'Invalid canvas data: {str(e)}'}), 400
+    else:
+        return jsonify({'error': 'No file or canvas data provided'}), 400
 
-        # Read image, preprocess and make prediction
-        img = cv2.imread(filepath)
-        if img is None:
-            return jsonify({'error': 'Failed to read image'}), 400
-
+    try:
         # Preprocess the image and get base64 encodings
-        processed_img, thumbnail_b64, processed_b64 = preprocess(img)
+        processed_img, original_b64, processed_b64 = preprocess_image(img_bytes)
 
         # Import Tensor class for prediction
         from core.tensor import Tensor
@@ -119,17 +159,14 @@ def predict():
         # Get the predicted digit
         prediction = np.argmax(probabilities)
 
-        # Clean up by removing the uploaded file
-        os.remove(filepath)
-
         return jsonify({
             'prediction': int(prediction),
-            'probabilities': probabilities.tolist(),
-            'original_image': f'data:image/png;base64,{thumbnail_b64}',
-            'processed_image': f'data:image/png;base64,{processed_b64}'
+            'probs': probabilities.tolist(),
+            'original': f'data:image/png;base64,{original_b64}',
+            'preprocessed': f'data:image/png;base64,{processed_b64}'
         })
-
-    return jsonify({'error': 'Invalid file type'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Error processing image: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
