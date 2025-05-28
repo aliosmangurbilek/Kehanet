@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  kehanet:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5687:5687"
+    volumes:
+      - ./uploads:/app/uploads
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
