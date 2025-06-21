@@ -1,35 +1,67 @@
-deepnet/
-├── core/                 # Temel sınıflar ve yardımcı fonksiyonlar
-│   ├── tensor.py         # Tensor sınıfı ve işlemleri
-│   ├── autograd.py       # Otomatik türev hesaplama
-│   └── utils.py          # Yardımcı fonksiyonlar
-├── layers/               # Katmanlar (örneğin, Dense, Conv2D)
-│   ├── base.py           # Tüm katmanlar için temel sınıf
-│   ├── dense.py          # Tam bağlantılı katman
-│   ├── conv2d.py         # 2D evrişimli katman
-│   └── activation.py     # Aktivasyon fonksiyonları
-├── models/               # Model tanımlamaları
-│   └── sequential.py     # Sıralı model sınıfı
-├── optimizers/           # Optimizasyon algoritmaları
-│   ├── sgd.py            # Stokastik gradyan inişi
-│   └── adam.py           # Adam optimizasyonu
-├── losses/               # Kayıp fonksiyonları
-│   ├── mse.py            # Ortalama kare hatası
-│   └── cross_entropy.py  # Çapraz entropi kaybı
-├── data/                 # Veri işleme ve yükleme
-│   ├── dataloader.py     # Veri yükleyici sınıfı
-│   └── datasets.py       # Örnek veri setleri (MNIST vb.)
-├── training/             # Eğitim döngüsü ve değerlendirme
-│   ├── trainer.py        # Eğitim döngüsü
-│   └── evaluator.py      # Model değerlendirme
-├── tests/                # Birim testleri
-│   ├── test_tensor.py    # Tensor sınıfı testleri
-│   └── test_layers.py    # Katman testleri
-├── examples/             # Örnek projeler ve kullanım senaryoları
-│   ├── mnist_example.py  # MNIST veri seti ile örnek
-│   └── cifar10_example.py# CIFAR-10 veri seti ile örnek
-├── docs/                 # Belgeler ve kullanım kılavuzları
-│   └── index.md          # Ana belge
-├── requirements.txt      # Gerekli Python paketleri
-├── setup.py              # Paket kurulum dosyası
-└── README.md             # Proje açıklaması
+# MNIST Sınıflandırıcı Web Uygulaması
+
+El yazısı rakamları yükleyip veya çizebileceğiniz, modelin tüm adımlarını (ham girdi, ön işleme, sınıflandırma olasılıkları) görselleştiren modern bir Flask tabanlı web uygulaması.
+
+---
+
+## Canlı Demo
+
+[https://aliosmangurbilek.online](https://aliosmangurbilek.online)
+
+---
+
+## Özellikler
+
+- **Çift Giriş:**  
+  - Resim yükleme veya HTML5 canvas ile çizim
+- **Ön İşleme Önizlemesi:**  
+  - Orijinal ve 28×28 normalize edilmiş görüntü
+- **Tahmin Sonuçları:**  
+  - 0–9 arası olasılıkların animasyonlu bar grafiği, vurgulu en yüksek olasılık
+- **Modern Arayüz:**  
+  - Bootstrap 5, kart tabanlı tasarım, açıklayıcı tooltip’ler ve “Nasıl Çalışır?” modalı
+- **Üretim Hazır Dağıtım:**  
+  - Minimal Docker imajı, Gunicorn WSGI, non-root kullanıcı, sağlık kontrolleri, docker-compose desteği
+
+---
+
+## Gereksinimler
+
+- Docker ≥ 20.10
+- docker-compose ≥ 1.29
+
+**Alternatif:**  
+- Python ≥ 3.10  
+- pip
+
+---
+
+## Kurulum ve Kullanım
+
+### 1. Depoyu Klonlayın
+
+```bash
+git clone https://github.com/your-username/your-repo.git
+cd your-repo
+```
+
+### 2. Docker ile Başlatın
+
+```bash
+docker-compose up --build
+```
+
+Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışacaktır.
+
+### 3. Manuel (Docker’sız) Çalıştırmak için
+
+```bash
+pip install -r requirements.txt
+python app.py
+```
+
+---
+
+## Lisans
+
+MIT
