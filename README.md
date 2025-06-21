@@ -68,7 +68,3 @@ python app.py
 ```
 
 ---
-
-## Lisans
-
-MIT
