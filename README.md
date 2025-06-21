@@ -10,6 +10,13 @@ El yazısı rakamları yükleyip veya çizebileceğiniz, modelin tüm adımları
 
 ---
 
+## Ekran Görüntüsü
+
+![Uygulama Ekran Görüntüsü](assets/a.png)
+![Uygulama Ekran Görüntüsü](assets/b.png)
+![Uygulama Ekran Görüntüsü](assets/c.png)
+---
+
 ## Özellikler
 
 - **Çift Giriş:**  
