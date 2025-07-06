@@ -48,8 +48,8 @@ El yazısı rakamları yükleyip veya çizebileceğiniz, modelin tüm adımları
 ### 1. Depoyu Klonlayın
 
 ```bash
-git clone https://github.com/your-username/your-repo.git
-cd your-repo
+git clone https://github.com/aliosmangurbilek/Kehanet.git
+cd Kehanet
 ```
 
 ### 2. Docker ile Başlatın
