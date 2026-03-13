@@ -29,30 +29,77 @@
 
     <!-- Main Content -->
     <div class="container my-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="card shadow">
-                    <div class="card-header bg-white p-3">
-                        <ul class="nav nav-pills nav-fill" id="inputTabs" role="tablist">
+        <div class="row g-4 align-items-start">
+            <div class="col-xl-8">
+                <div class="card shadow control-card">
+                    <div class="card-header bg-white p-4">
+                        <div class="hero-copy">
+                            <span class="eyebrow">Interactive inference demo</span>
+                            <h1 class="hero-title">Draw a digit and inspect what the network sees</h1>
+                            <p class="hero-subtitle">
+                                The canvas is now the default starting point. Sketch a number, run inference,
+                                and compare your raw input with the normalized 28x28 image sent into the model.
+                            </p>
+                        </div>
+
+                        <ul class="nav nav-pills nav-fill mt-4" id="inputTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="upload-tab" data-bs-toggle="pill"
-                                        data-bs-target="#upload-pane" type="button" role="tab">
-                                    <i class="bi bi-upload"></i> Upload Image
+                                <button class="nav-link active" id="draw-tab" data-bs-toggle="pill"
+                                        data-bs-target="#draw-pane" type="button" role="tab">
+                                    <i class="bi bi-pencil"></i> Draw Digit
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="draw-tab" data-bs-toggle="pill"
-                                        data-bs-target="#draw-pane" type="button" role="tab">
-                                    <i class="bi bi-pencil"></i> Draw Digit
+                                <button class="nav-link" id="upload-tab" data-bs-toggle="pill"
+                                        data-bs-target="#upload-pane" type="button" role="tab">
+                                    <i class="bi bi-upload"></i> Upload Image
                                 </button>
                             </li>
                         </ul>
                     </div>
 
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div class="tab-content" id="inputTabContent">
+                            <!-- Draw Digit Tab -->
+                            <div class="tab-pane fade show active" id="draw-pane" role="tabpanel">
+                                <div class="pane-header">
+                                    <h3>Sketch a single digit</h3>
+                                    <p>
+                                        Draw directly on the canvas, keep the number centered, and use the prediction
+                                        button to send it through the MNIST preprocessing and classification pipeline.
+                                    </p>
+                                </div>
+
+                                <div class="drawing-container">
+                                    <div class="drawing-stage">
+                                        <canvas id="drawing-canvas" width="280" height="280" class="drawing-canvas"></canvas>
+                                    </div>
+                                    <div class="quick-tip-row">
+                                        <span class="tip-pill">Single digit</span>
+                                        <span class="tip-pill">Centered strokes</span>
+                                        <span class="tip-pill">High contrast</span>
+                                    </div>
+                                    <div class="canvas-controls mt-3 d-flex justify-content-center">
+                                        <button type="button" id="clear-btn" class="btn btn-outline-secondary me-2">
+                                            Clear Canvas
+                                        </button>
+                                        <button type="button" id="predict-draw-btn" class="btn btn-primary">
+                                            Predict Digit
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Upload Image Tab -->
-                            <div class="tab-pane fade show active" id="upload-pane" role="tabpanel">
+                            <div class="tab-pane fade" id="upload-pane" role="tabpanel">
+                                <div class="pane-header">
+                                    <h3>Upload an existing image</h3>
+                                    <p>
+                                        If you already have a handwritten digit image, upload it here and the same
+                                        preprocessing pipeline will convert it before inference.
+                                    </p>
+                                </div>
+
                                 <div class="upload-area" id="upload-area">
                                     <input type="file" id="file-input" class="visually-hidden" accept=".jpg, .jpeg, .png">
                                     <div class="upload-icon">
@@ -71,21 +118,6 @@
                                     <button type="button" id="predict-upload-btn" class="btn btn-primary" disabled>
                                         Predict Digit
                                     </button>
-                                </div>
-                            </div>
-
-                            <!-- Draw Digit Tab -->
-                            <div class="tab-pane fade" id="draw-pane" role="tabpanel">
-                                <div class="drawing-container">
-                                    <canvas id="drawing-canvas" width="280" height="280" class="drawing-canvas"></canvas>
-                                    <div class="canvas-controls mt-3 d-flex justify-content-center">
-                                        <button type="button" id="clear-btn" class="btn btn-outline-secondary me-2">
-                                            Clear Canvas
-                                        </button>
-                                        <button type="button" id="predict-draw-btn" class="btn btn-primary">
-                                            Predict Digit
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -135,6 +167,68 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="col-xl-4">
+                <aside class="card shadow-sm info-card">
+                    <div class="card-body p-4">
+                        <span class="eyebrow">How the project works</span>
+                        <h2 class="info-title">From browser strokes to a predicted digit</h2>
+                        <p class="info-lead">
+                            This project is a compact inference demo built around an MNIST-style handwritten digit
+                            classifier. What you draw is transformed into the same representation used during training.
+                        </p>
+
+                        <div class="workflow-list">
+                            <div class="workflow-step">
+                                <div class="step-number">1</div>
+                                <div>
+                                    <h3>Capture</h3>
+                                    <p>The browser reads your drawing from the canvas or takes an uploaded image as input.</p>
+                                </div>
+                            </div>
+
+                            <div class="workflow-step">
+                                <div class="step-number">2</div>
+                                <div>
+                                    <h3>Preprocess</h3>
+                                    <p>The backend converts the image to grayscale, resizes it to 28x28, normalizes pixel values, and inverts if needed.</p>
+                                </div>
+                            </div>
+
+                            <div class="workflow-step">
+                                <div class="step-number">3</div>
+                                <div>
+                                    <h3>Infer</h3>
+                                    <p>The trained neural network consumes the flattened 784-value input and computes class logits for digits 0 to 9.</p>
+                                </div>
+                            </div>
+
+                            <div class="workflow-step">
+                                <div class="step-number">4</div>
+                                <div>
+                                    <h3>Explain</h3>
+                                    <p>The UI shows both the processed image and the full probability chart so you can see why one digit won over the others.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-divider"></div>
+
+                        <h3 class="info-section-title">What is happening mathematically?</h3>
+                        <p class="info-copy">
+                            Each dense layer learns useful stroke patterns such as loops, edges, angles, and relative
+                            placement. The last layer produces scores, and softmax turns those scores into probabilities.
+                        </p>
+
+                        <h3 class="info-section-title">Best input tips</h3>
+                        <ul class="tips-list">
+                            <li>Draw one digit at a time.</li>
+                            <li>Keep the digit close to the center of the canvas.</li>
+                            <li>Use thick, clear strokes and avoid extra marks.</li>
+                        </ul>
+                    </div>
+                </aside>
             </div>
         </div>
     </div>

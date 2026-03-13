@@ -1,13 +1,28 @@
 /* MNIST Digit Classifier - Main Styles */
 
+:root {
+    --accent: #0d6efd;
+    --accent-soft: rgba(13, 110, 253, 0.08);
+    --surface: rgba(255, 255, 255, 0.94);
+    --surface-border: rgba(15, 23, 42, 0.08);
+    --text-muted: #5b6472;
+}
+
 /* ------------ General Styles ------------ */
 body {
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #f8f9fa;
+    background:
+        radial-gradient(circle at top left, rgba(13, 110, 253, 0.12), transparent 30%),
+        linear-gradient(180deg, #f6f9ff 0%, #f8f9fa 45%, #eef3f9 100%);
     color: #212529;
+    min-height: 100vh;
 }
 
 /* Navbar customization */
+.navbar {
+    backdrop-filter: blur(12px);
+}
+
 .navbar-brand {
     font-weight: 600;
     letter-spacing: -0.5px;
@@ -18,23 +33,75 @@ body {
     border: none;
     border-radius: 12px;
     transition: all 0.3s ease;
+    background: var(--surface);
 }
 
 .card-header {
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+    border-bottom: 1px solid var(--surface-border);
     padding: 1rem 1.5rem;
     border-radius: 12px 12px 0 0 !important;
+}
+
+.control-card,
+.info-card {
+    border: 1px solid var(--surface-border);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+}
+
+.eyebrow {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.hero-copy {
+    max-width: 680px;
+}
+
+.hero-title {
+    font-size: clamp(2rem, 3vw, 2.75rem);
+    line-height: 1.05;
+    margin-bottom: 0.75rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+}
+
+.hero-subtitle,
+.pane-header p,
+.info-lead,
+.info-copy,
+.workflow-step p {
+    color: var(--text-muted);
+    line-height: 1.65;
+    margin-bottom: 0;
+}
+
+.pane-header {
+    max-width: 700px;
+    margin-bottom: 1.5rem;
+}
+
+.pane-header h3,
+.info-title,
+.info-section-title,
+.workflow-step h3 {
+    font-weight: 700;
+    letter-spacing: -0.03em;
 }
 
 /* ------------ Upload Section ------------ */
 .upload-area {
     border: 2px dashed #dee2e6;
-    border-radius: 8px;
+    border-radius: 18px;
     padding: 3rem 1rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
-    background-color: #f8f9fa;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(13, 110, 253, 0.03));
     max-width: 500px;
     margin: 0 auto;
 }
@@ -65,13 +132,39 @@ body {
     margin: 0 auto;
 }
 
+.drawing-stage {
+    padding: 1.25rem;
+    border-radius: 24px;
+    background:
+        linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(13, 110, 253, 0.02)),
+        #f7fbff;
+    border: 1px solid rgba(13, 110, 253, 0.14);
+}
+
 .drawing-canvas {
     background-color: white;
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
+    border-radius: 18px;
+    border: 1px solid rgba(13, 110, 253, 0.18);
     touch-action: none;
     cursor: crosshair;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 18px 30px rgba(13, 110, 253, 0.08);
+}
+
+.quick-tip-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.tip-pill {
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(13, 110, 253, 0.1);
+    color: #0a58ca;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
 /* ------------ Image Previews ------------ */
@@ -126,6 +219,80 @@ body {
     margin-top: 1rem;
 }
 
+/* ------------ Info Panel ------------ */
+.info-card {
+    position: sticky;
+    top: 1.5rem;
+    overflow: hidden;
+}
+
+.info-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at top right, rgba(13, 110, 253, 0.12), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent);
+    pointer-events: none;
+}
+
+.info-card .card-body {
+    position: relative;
+}
+
+.info-title {
+    font-size: 1.7rem;
+    margin-bottom: 0.75rem;
+}
+
+.workflow-step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 1rem;
+    align-items: start;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.workflow-list .workflow-step:last-child {
+    border-bottom: none;
+}
+
+.step-number {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0d6efd, #4ea1ff);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 12px 24px rgba(13, 110, 253, 0.18);
+}
+
+.workflow-step h3,
+.info-section-title {
+    font-size: 1rem;
+    margin-bottom: 0.35rem;
+}
+
+.info-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(13, 110, 253, 0.3), transparent);
+    margin: 1.25rem 0;
+}
+
+.tips-list {
+    padding-left: 1.2rem;
+    margin-bottom: 0;
+    color: var(--text-muted);
+}
+
+.tips-list li + li {
+    margin-top: 0.45rem;
+}
+
 /* ------------ Loading Overlay ------------ */
 .loading-overlay {
     position: fixed;
@@ -143,6 +310,10 @@ body {
 
 /* ------------ Responsive Adjustments ------------ */
 @media (max-width: 767.98px) {
+    .hero-title {
+        font-size: 1.75rem;
+    }
+
     .top-prediction {
         font-size: 4rem;
         height: 80px;
@@ -156,6 +327,14 @@ body {
         width: 100%;
         max-width: 280px;
         height: auto;
+    }
+
+    .drawing-stage {
+        padding: 0.85rem;
+    }
+
+    .info-card {
+        position: static;
     }
 }
 
@@ -174,10 +353,13 @@ body {
     border-radius: 6px;
     padding: 0.75rem 1.5rem;
     font-weight: 500;
+    color: #37516f;
+    background-color: rgba(13, 110, 253, 0.05);
 }
 
 .nav-pills .nav-link.active {
-    background-color: #0d6efd;
+    background: linear-gradient(135deg, #0d6efd, #4f9dff);
+    box-shadow: 0 10px 18px rgba(13, 110, 253, 0.16);
 }
 
 /* Bootstrap icons (for tab icons) */
