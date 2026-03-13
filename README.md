@@ -58,7 +58,7 @@ cd Kehanet
 docker-compose up --build
 ```
 
-Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışacaktır.
+Uygulama varsayılan olarak `http://localhost:1314` adresinde çalışacaktır.
 
 ### 3. Manuel (Docker’sız) Çalıştırmak için
 

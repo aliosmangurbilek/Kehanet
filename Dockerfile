@@ -2,9 +2,9 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+# Install runtime dependencies required by OpenCV on current Debian slim images.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,7 +23,7 @@ RUN sed -i 's|/home/ali/PycharmProjects/Kehanet/models/trained_mnist_model.pkl|/
 RUN sed -i 's|/home/ali/PycharmProjects/Kehanet/examples/trained_mnist_model.pkl|/app/examples/trained_mnist_model.pkl|g' app.py
 
 # Expose port for the Flask application
-EXPOSE 5687
+EXPOSE 1314
 
 # Command to run the application
 CMD ["python", "app.py"]

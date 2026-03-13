@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5687:5687"
+      - "1314:1314"
     volumes:
       - ./uploads:/app/uploads
     environment:
